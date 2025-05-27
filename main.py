@@ -1,0 +1,123 @@
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+from pytubefix import YouTube
+from pytubefix.cli import on_progress
+from PIL import ImageTk, Image
+import requests
+from io import BytesIO
+import tempfile
+from moviepy.editor import VideoFileClip, AudioFileClip
+import re
+import threading
+
+#https://www.youtube.com/watch?v=rJNBGqiBI7s
+
+def download_thread():
+    thread = threading.Thread(target=download)
+    thread.start()
+
+def download():
+    url = entry.get()
+    resl = resolution.get()
+    if resl == " ":
+        messagebox.showerror("Error", "Select a resolution after checking the available resolutions")
+    elif resl in res and resl in res_m:
+        try:
+            yt = YouTube(url, on_progress_callback=on_progress)
+            print(yt.title)
+            ys = yt.streams.filter(res=resl, progressive=True, file_extension="mp4").first()
+            ys.download()
+        except Exception as e:
+            print(e)
+            messagebox.showerror("Error", "An error occurred while downloading the video")
+    else:
+        try:
+            yt = YouTube(url, on_progress_callback=on_progress)
+            video_stream = yt.streams.filter(adaptive=True, only_video=True, file_extension="mp4",resolution=resl).first()
+            audio_stream = yt.streams.filter(only_audio=True, file_extension="mp4").first()
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as video_temp, \
+                    tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as audio_temp:
+
+                video_stream.stream_to_buffer(video_temp)
+                audio_stream.stream_to_buffer(audio_temp)
+
+                video_temp.flush()
+                audio_temp.flush()
+
+                # Step 5: Load with moviepy and merge
+                video = VideoFileClip(video_temp.name)
+                audio = AudioFileClip(audio_temp.name)
+                final = video.set_audio(audio)
+
+                # Step 6: Write merged output
+                fl_name = re.sub(r'[<>:"/\\|?*]', '_', yt.title)
+                final.write_videofile(f"{fl_name}-{resl}.mp4", codec="libx264", audio_codec="aac")
+        except Exception as e:
+            print(e)
+            messagebox.showerror("Error", "An error occurred while downloading the video")
+
+def check_res():
+    global res, thumbnail, img, res_m
+
+    url = entry.get()
+    try:
+        yt = YouTube(url)
+        res = []
+        res_m = []
+
+        for stream in yt.streams.filter(progressive=True, file_extension='mp4'):
+            if stream.resolution not in res:
+                res.append(stream.resolution)
+                res_m.append(stream.resolution)
+            print(f"Progressive: {stream.resolution} - {stream.mime_type}")
+
+        for stream in yt.streams.filter(adaptive=True, only_video=True):
+            if stream.resolution not in res:
+                res.append(stream.resolution)
+            print(f"Adaptive: {stream.resolution} - {stream.mime_type}")
+
+        resolution['values'] = res
+        resolution.current(0)
+
+        thumb_url = f"https://img.youtube.com/vi/{yt.video_id}/default.jpg"
+        img_data = requests.get(thumb_url).content
+
+        img = ImageTk.PhotoImage(Image.open(BytesIO(img_data)))
+
+        if 'thumbnail' in globals():
+            thumbnail.config(image=img)
+            thumbnail.image = img
+        else:
+            thumbnail = tk.Label(root, image=img)
+            thumbnail.image = img
+            thumbnail.pack()
+    except Exception as e:
+        if str(e) == "regex_search: could not find match for (?:v=|\/)([0-9A-Za-z_-]{11}).*":
+                messagebox.showerror("Error", "Enter a valid URL")
+        else:
+            messagebox.showerror("Error", e)
+
+res = [" "]
+res_m = []
+root = tk.Tk()
+root.title("AYTD - YouTube Downloader")
+root.geometry("300x600")
+
+label = tk.Label(root, text="Enter URL")
+label.pack(pady=10)
+
+entry = tk.Entry(root, width=30)
+entry.pack(pady=5)
+
+resolution = ttk.Combobox(root, values=res)
+resolution.current(0)
+resolution.pack(pady=5)
+
+check_button = tk.Button(root, text="Check", command=check_res)
+check_button.pack(pady=10)
+
+download_button = tk.Button(root, text="Download", command=download_thread)
+download_button.pack(pady=10)
+
+root.mainloop()
