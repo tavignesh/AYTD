@@ -31,9 +31,8 @@ class ConsoleTee:
 def console_update_worker():
     buffer = []
     while True:
-        msg = q.get()  # Blocking wait for new message
+        msg = q.get()
         buffer.append(msg)
-        # Collect all currently available messages
         while not q.empty():
             buffer.append(q.get_nowait())
 
@@ -52,17 +51,19 @@ def download_thread():
 def download():
     def animate(i=0):
         if running:
-            loadgif.config(image=frames[i])
-            root.after(30, animate, (i + 1) % len(frames))
+            # Resize frames to fixed size before creating PhotoImage
+            resized_frame = frames_resized[i]
+            loadgif.config(image=resized_frame)
+            root.after(30, animate, (i + 1) % len(frames_resized))
 
     global running
     running = True
 
     gif = Image.open("amongus.gif")
-    frames = [ImageTk.PhotoImage(f.copy()) for f in ImageSequence.Iterator(gif)]
+    frames_resized = [ImageTk.PhotoImage(f.copy().resize((95, 100))) for f in ImageSequence.Iterator(gif)]
     global loadgif
-    loadgif = tk.Label(root)
-    loadgif.pack()
+    loadgif = tk.Label(root, bg='grey20')
+    loadgif.grid(row=0, column=4, rowspan=2)
     animate()
 
     url = entry.get()
@@ -115,12 +116,11 @@ def download():
             print(e)
             messagebox.showerror("Error", "An error occurred while downloading the video")
     running = False
-    loadgif.pack_forget()
+    loadgif.grid_forget()
     messagebox.showinfo(title="Completed", message="Your file has been successfully downloaded!")
 
 def check_res():
     global res, thumbnail, img, res_m
-
     url = entry.get()
     try:
         yt = YouTube(url)
@@ -150,9 +150,9 @@ def check_res():
             thumbnail.config(image=img)
             thumbnail.image = img
         else:
-            thumbnail = tk.Label(root, image=img)
+            thumbnail = tk.Label(root, image=img, bg='grey20')
             thumbnail.image = img
-            thumbnail.pack()
+            thumbnail.grid(row=0, column=3, rowspan=2)   # Thumbnail in column 4 spanning rows 0 and 1
     except Exception as e:
         if str(e) == "regex_search: could not find match for (?:v=|\/)([0-9A-Za-z_-]{11}).*":
             messagebox.showerror("Error", "Enter a valid URL")
@@ -160,33 +160,80 @@ def check_res():
             print(e)
             messagebox.showerror("Error", str(e))
 
+
 running = False
 res = [" "]
 res_m = []
 
+button_style = {
+    "bg": "#333333",
+    "fg": "white",
+    "activebackground": "#444444",
+    "activeforeground": "white",
+    "borderwidth": 2,
+    "relief": "raised"
+}
+
+entry_style = {
+    "bg": "grey20",
+    "fg": "white",
+    "insertbackground": "white",
+    "highlightbackground": "white",  # Border color when not focused
+    "highlightcolor": "white",       # Border color when focused
+    "highlightthickness": 2,         # Thickness of the border
+    "relief": "flat"
+}
+
+label_style = {
+    "bg": "grey20",
+    "fg": "white"
+}
+
+combo_style = {
+    "background": "#333333",
+    "fieldbackground": "grey20",
+    "foreground": "white"
+}
+
 root = tk.Tk()
 root.title("AYTD - YouTube Downloader")
-root.geometry("300x600")
-root.configure(bg='gray20')
+root.geometry("800x220")
+root.configure(bg='grey20')
 
-label = tk.Label(root, text="Enter URL")
-label.pack(pady=10)
+label = tk.Label(root, text="Enter URL:", **label_style)
+label.grid(row=0, column=0, sticky="w", padx=10, pady=5)
 
-entry = tk.Entry(root, width=30)
-entry.pack(pady=5)
+entry = tk.Entry(root, width=30, **entry_style)
+entry.grid(row=0, column=1, sticky="ew", padx=10, pady=5)
 
-resolution = ttk.Combobox(root, values=res)
+check_button = tk.Button(root, text="Check", **button_style, command=check_res)
+check_button.grid(row=0, column=2, sticky="w", padx=10, pady=5)
+
+label2 = tk.Label(root, text="Resolution:", **label_style)
+label2.grid(row=1, column=0, columnspan=3, sticky="w", padx=10, pady=5)
+
+style = ttk.Style()
+style.theme_use('clam')
+style.configure("TCombobox",
+                fieldbackground="grey20",
+                background="#333333",
+                foreground="white")
+
+resolution = ttk.Combobox(root, values=res, style="TCombobox")
 resolution.current(0)
-resolution.pack(pady=5)
+resolution.grid(row=1, column=1, sticky="ew", padx=10, pady=5)
 
-check_button = tk.Button(root, text="Check", command=check_res)
-check_button.pack(pady=10)
+download_button = tk.Button(root, text="Download", **button_style, command=download_thread)
+download_button.grid(row=1, column=2, sticky="w", padx=10, pady=10)
 
-download_button = tk.Button(root, text="Download", command=download_thread)
-download_button.pack(pady=10)
+console_output = st.ScrolledText(root, height=7, state='disabled', bg='grey20', fg='white', insertbackground='white')
+console_output.grid(row=3, column=0, columnspan=5, sticky="nsew", padx=10, pady=5)
 
-console_output = st.ScrolledText(root, height=10, state='disabled')
-console_output.pack(fill='both', expand=True)
+root.grid_rowconfigure(4, weight=1)
+root.grid_columnconfigure(1, weight=1)
+root.grid_columnconfigure(3, minsize=170)
+root.grid_columnconfigure(4, minsize=120)
+
 original_stdout = sys.stdout
 original_stderr = sys.stderr
 sys.stdout = ConsoleTee(original_stdout, q)
