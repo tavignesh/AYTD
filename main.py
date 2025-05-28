@@ -1,23 +1,70 @@
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
-from PIL import ImageTk, Image
+from PIL import ImageTk, Image, ImageSequence
 import requests
 from io import BytesIO
 import tempfile
 from moviepy.editor import VideoFileClip, AudioFileClip
 import re
 import threading
+import sys
+import tkinter.scrolledtext as st
+import queue
 
 #https://www.youtube.com/watch?v=rJNBGqiBI7s
+q = queue.Queue()
+
+class ConsoleTee:
+    def __init__(self, original, queue):
+        self.original = original
+        self.queue = queue
+
+    def write(self, msg):
+        self.original.write(msg)
+        self.queue.put(msg)
+
+    def flush(self):
+        self.original.flush()
+
+def console_update_worker():
+    buffer = []
+    while True:
+        msg = q.get()  # Blocking wait for new message
+        buffer.append(msg)
+        # Collect all currently available messages
+        while not q.empty():
+            buffer.append(q.get_nowait())
+
+        def append_text():
+            console_output.configure(state='normal')
+            console_output.insert(tk.END, ''.join(buffer))
+            console_output.see(tk.END)
+            console_output.configure(state='disabled')
+
+        root.after(0, append_text)
+        buffer.clear()
 
 def download_thread():
-    thread = threading.Thread(target=download)
-    thread.start()
+    threading.Thread(target=download, daemon=True).start()
 
 def download():
+    def animate(i=0):
+        if running:
+            loadgif.config(image=frames[i])
+            root.after(30, animate, (i + 1) % len(frames))
+
+    global running
+    running = True
+
+    gif = Image.open("amongus.gif")
+    frames = [ImageTk.PhotoImage(f.copy()) for f in ImageSequence.Iterator(gif)]
+    global loadgif
+    loadgif = tk.Label(root)
+    loadgif.pack()
+    animate()
+
     url = entry.get()
     resl = resolution.get()
     if resl == " ":
@@ -47,7 +94,7 @@ def download():
     else:
         try:
             yt = YouTube(url, on_progress_callback=on_progress)
-            video_stream = yt.streams.filter(adaptive=True, only_video=True, file_extension="mp4",resolution=resl).first()
+            video_stream = yt.streams.filter(adaptive=True, only_video=True, file_extension="mp4", resolution=resl).first()
             audio_stream = yt.streams.filter(only_audio=True, file_extension="mp4").first()
             with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as video_temp, \
                     tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as audio_temp:
@@ -58,17 +105,17 @@ def download():
                 video_temp.flush()
                 audio_temp.flush()
 
-                # Step 5: Load with moviepy and merge
                 video = VideoFileClip(video_temp.name)
                 audio = AudioFileClip(audio_temp.name)
                 final = video.set_audio(audio)
 
-                # Step 6: Write merged output
                 fl_name = re.sub(r'[<>:"/\\|?*]', '_', yt.title)
                 final.write_videofile(f"{fl_name}-{resl}.mp4", codec="libx264", audio_codec="aac")
         except Exception as e:
             print(e)
             messagebox.showerror("Error", "An error occurred while downloading the video")
+    running = False
+    loadgif.pack_forget()
 
 def check_res():
     global res, thumbnail, img, res_m
@@ -109,10 +156,14 @@ def check_res():
         if str(e) == "regex_search: could not find match for (?:v=|\/)([0-9A-Za-z_-]{11}).*":
                 messagebox.showerror("Error", "Enter a valid URL")
         else:
-            messagebox.showerror("Error", e)
+            messagebox.showerror("Error", str(e))
 
+# Initialize globals
+running = False
 res = [" "]
 res_m = []
+
+# Setup Tkinter window
 root = tk.Tk()
 root.title("AYTD - YouTube Downloader")
 root.geometry("300x600")
@@ -132,5 +183,17 @@ check_button.pack(pady=10)
 
 download_button = tk.Button(root, text="Download", command=download_thread)
 download_button.pack(pady=10)
+
+console_output = st.ScrolledText(root, height=10, state='disabled')
+console_output.pack(fill='both', expand=True)
+
+original_stdout = sys.stdout
+original_stderr = sys.stderr
+
+sys.stdout = ConsoleTee(original_stdout, q)
+sys.stderr = ConsoleTee(original_stderr, q)
+
+# Start console update thread
+threading.Thread(target=console_update_worker, daemon=True).start()
 
 root.mainloop()
