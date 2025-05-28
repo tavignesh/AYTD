@@ -22,10 +22,23 @@ def download():
     resl = resolution.get()
     if resl == " ":
         messagebox.showerror("Error", "Select a resolution after checking the available resolutions")
+    elif resl == "mp3":
+        try:
+            yt = YouTube(url, on_progress_callback=on_progress)
+            audio = yt.streams.filter(only_audio=True, file_extension="mp4").first()
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as audio_temp:
+                audio.stream_to_buffer(audio_temp)
+                audio_temp.flush()
+                audio_clip = AudioFileClip(audio_temp.name)
+                safe_title = re.sub(r'[<>:"/\\|?*]', '_', yt.title)
+                audio_clip.write_audiofile(f"{safe_title}-audio-only.mp3")
+                audio_clip.close()
+        except Exception as e:
+            print(e)
+            messagebox.showerror("Error", "Unable to Fetch. Does it even Exist?")
     elif resl in res and resl in res_m:
         try:
             yt = YouTube(url, on_progress_callback=on_progress)
-            print(yt.title)
             ys = yt.streams.filter(res=resl, progressive=True, file_extension="mp4").first()
             ys.download()
         except Exception as e:
@@ -76,7 +89,7 @@ def check_res():
             if stream.resolution not in res:
                 res.append(stream.resolution)
             print(f"Adaptive: {stream.resolution} - {stream.mime_type}")
-
+        res.append("mp3")
         resolution['values'] = res
         resolution.current(0)
 
