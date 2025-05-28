@@ -1,17 +1,17 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
-from pytubefix import YouTube
-from pytubefix.cli import on_progress
-from PIL import ImageTk, Image, ImageSequence
 import requests
-from io import BytesIO
 import tempfile
-from moviepy.editor import VideoFileClip, AudioFileClip
+import tkinter as tk
 import re
 import threading
 import sys
 import tkinter.scrolledtext as st
 import queue
+from tkinter import ttk, messagebox
+from pytubefix import YouTube
+from pytubefix.cli import on_progress
+from PIL import ImageTk, Image, ImageSequence
+from io import BytesIO
+from moviepy.editor import VideoFileClip, AudioFileClip
 
 #https://www.youtube.com/watch?v=rJNBGqiBI7s
 q = queue.Queue()
@@ -116,8 +116,7 @@ def download():
             messagebox.showerror("Error", "An error occurred while downloading the video")
     running = False
     loadgif.pack_forget()
-    done_label = tk.Label(root, text="Downloaded!!")
-    done_label.pack(pady=10)
+    messagebox.showinfo(title="Completed", message="Your file has been successfully downloaded!")
 
 def check_res():
     global res, thumbnail, img, res_m
@@ -156,8 +155,9 @@ def check_res():
             thumbnail.pack()
     except Exception as e:
         if str(e) == "regex_search: could not find match for (?:v=|\/)([0-9A-Za-z_-]{11}).*":
-                messagebox.showerror("Error", "Enter a valid URL")
+            messagebox.showerror("Error", "Enter a valid URL")
         else:
+            print(e)
             messagebox.showerror("Error", str(e))
 
 running = False
@@ -167,6 +167,7 @@ res_m = []
 root = tk.Tk()
 root.title("AYTD - YouTube Downloader")
 root.geometry("300x600")
+root.configure(bg='gray20')
 
 label = tk.Label(root, text="Enter URL")
 label.pack(pady=10)
@@ -186,13 +187,10 @@ download_button.pack(pady=10)
 
 console_output = st.ScrolledText(root, height=10, state='disabled')
 console_output.pack(fill='both', expand=True)
-
 original_stdout = sys.stdout
 original_stderr = sys.stderr
-
 sys.stdout = ConsoleTee(original_stdout, q)
 sys.stderr = ConsoleTee(original_stderr, q)
-
 threading.Thread(target=console_update_worker, daemon=True).start()
 
 root.mainloop()
