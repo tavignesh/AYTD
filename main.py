@@ -13,7 +13,6 @@ from PIL import ImageTk, Image, ImageSequence
 from io import BytesIO
 from moviepy.editor import VideoFileClip, AudioFileClip
 
-#https://www.youtube.com/watch?v=rJNBGqiBI7s
 q = queue.Queue()
 
 class ConsoleTee:
@@ -22,7 +21,7 @@ class ConsoleTee:
         self.queue = queue
 
     def write(self, msg):
-        self.original.write(msg)
+        # self.original.write(msg)
         self.queue.put(msg)
 
     def flush(self):
@@ -51,7 +50,6 @@ def download_thread():
 def download():
     def animate(i=0):
         if running:
-            # Resize frames to fixed size before creating PhotoImage
             resized_frame = frames_resized[i]
             loadgif.config(image=resized_frame)
             root.after(30, animate, (i + 1) % len(frames_resized))
@@ -152,7 +150,7 @@ def check_res():
         else:
             thumbnail = tk.Label(root, image=img, bg='grey20')
             thumbnail.image = img
-            thumbnail.grid(row=0, column=3, rowspan=2)   # Thumbnail in column 4 spanning rows 0 and 1
+            thumbnail.grid(row=0, column=3, rowspan=2)
     except Exception as e:
         if str(e) == "regex_search: could not find match for (?:v=|\/)([0-9A-Za-z_-]{11}).*":
             messagebox.showerror("Error", "Enter a valid URL")
@@ -178,9 +176,9 @@ entry_style = {
     "bg": "grey20",
     "fg": "white",
     "insertbackground": "white",
-    "highlightbackground": "white",  # Border color when not focused
-    "highlightcolor": "white",       # Border color when focused
-    "highlightthickness": 2,         # Thickness of the border
+    "highlightbackground": "white",
+    "highlightcolor": "white",
+    "highlightthickness": 2,
     "relief": "flat"
 }
 
