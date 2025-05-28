@@ -116,6 +116,8 @@ def download():
             messagebox.showerror("Error", "An error occurred while downloading the video")
     running = False
     loadgif.pack_forget()
+    done_label = tk.Label(root, text="Downloaded!!")
+    done_label.pack(pady=10)
 
 def check_res():
     global res, thumbnail, img, res_m
@@ -158,12 +160,10 @@ def check_res():
         else:
             messagebox.showerror("Error", str(e))
 
-# Initialize globals
 running = False
 res = [" "]
 res_m = []
 
-# Setup Tkinter window
 root = tk.Tk()
 root.title("AYTD - YouTube Downloader")
 root.geometry("300x600")
@@ -193,7 +193,6 @@ original_stderr = sys.stderr
 sys.stdout = ConsoleTee(original_stdout, q)
 sys.stderr = ConsoleTee(original_stderr, q)
 
-# Start console update thread
 threading.Thread(target=console_update_worker, daemon=True).start()
 
 root.mainloop()
