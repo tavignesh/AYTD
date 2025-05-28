@@ -4,6 +4,7 @@ import tkinter as tk
 import re
 import threading
 import sys
+import os
 import tkinter.scrolledtext as st
 import queue
 from tkinter import ttk, messagebox
@@ -17,7 +18,7 @@ q = queue.Queue()
 
 class ConsoleTee:
     def __init__(self, original, queue):
-        self.original = original
+        #self.original = original
         self.queue = queue
 
     def write(self, msg):
@@ -25,7 +26,8 @@ class ConsoleTee:
         self.queue.put(msg)
 
     def flush(self):
-        self.original.flush()
+        #self.original.flush()
+        pass
 
 def console_update_worker():
     buffer = []
@@ -57,7 +59,16 @@ def download():
     global running
     running = True
 
-    gif = Image.open("amongus.gif")
+    def resource_path(relative_path):
+        try:
+            base_path = sys._MEIPASS
+        except AttributeError:
+            base_path = os.path.abspath(".")
+
+        return os.path.join(base_path, relative_path)
+
+    gif_path = resource_path("amongus.gif")
+    gif = Image.open(gif_path)
     frames_resized = [ImageTk.PhotoImage(f.copy().resize((95, 100))) for f in ImageSequence.Iterator(gif)]
     global loadgif
     loadgif = tk.Label(root, bg='grey20')
