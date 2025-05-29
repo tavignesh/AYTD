@@ -1,6 +1,6 @@
 A simple standalone Youtube downloader for multiple resolutions and audio only downloads.<br><br>
 How to use:<br>
--> Download the ee from one of the stable releases. <br>
+-> Download the exe from one of the stable releases. <br>
 -> Open the exe and enter the video URL.<br>
 -> Click 'check' to fetch all the possible video resolutions.<br>
 -> Select the preffered resolution and click 'download' and wait for the download to complete.<br>
