@@ -1,4 +1,4 @@
-A simple standalone Youtube downloader for multiple resolutions and audio only downloads.<br>
+A simple standalone Youtube downloader for multiple resolutions and audio only downloads.<br><br>
 How to use:<br>
 -> Download the ee from one of the stable releases. <br>
 -> Open the exe and enter the video URL.<br>
